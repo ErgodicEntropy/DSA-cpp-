@@ -11,8 +11,6 @@
 using namespace std;
 
 
-
-
 // Algorithm: a sequence of steps followed to solve a given problem
 
 // Characteristics of algorithms
@@ -442,7 +440,7 @@ class Node{
 
 class LinkedList{
     public:
-        int numNodes;
+        int numNodes; //maximum number of nodes in a LL
         vector<Node> Nodes;
 
         inline static int counter = 0; 
@@ -493,6 +491,10 @@ class LinkedList{
 
         }
 
+        int LLSize(){ //how many nodes not counting head and tail
+            return this->Nodes.size() - 2; 
+        }
+
         void traverse(){
             vector<Node> nodes = this->Nodes;
             for (int k = 0; k < nodes.size(); k++){
@@ -519,16 +521,28 @@ class LinkedList{
         }
 
         void insert(Node x, int index){ //Assuming x is a node with a nullptr pointer value, but has a value of its own.
+            int currentSize = this->LLSize();             
+            if (index == 0 || index == currentSize+1){ //make it impossible to replace the head and tail to preserve the LL structure
+                return;
+            }
             Node fn = this->firstNode(); //head
         
-            x.pointer = &this->nthNode(fn, index+1); 
+            x.pointer = &this->nthNode(fn, index+1); //if index is currentSize of Nodes, then x points to the tail.
             this->nthNode(fn, index).pointer = &x; 
+            this->Nodes.insert(Nodes.begin()+index, x);
         }
 
         void del(int index){
+            int currentSize = this->LLSize();             
+            if (index == 0 || index == currentSize+1){ //make it impossible to delete the head and tail to preserve the LL structure
+                return;
+            }
+
             Node fn = this->firstNode(); //head
         
-            this->nthNode(fn, index-1).pointer = &this->nthNode(fn, index+1); 
+            this->nthNode(fn, index-1).pointer = &this->nthNode(fn, index+1); //in case a one-element LL, then the head points to tail after the operation
+
+            this->Nodes.erase(Nodes.begin()+index);
             
         }
 
@@ -543,32 +557,108 @@ class LinkedList{
         }
 };
 
-
-class Stack: public LinkedList{
+// For stacks, it's more memory-efficient to use arrays except for the edge of case of resizing due to its fixed size.
+class Stack: public LinkedList{//LIFO
     public:
-        int size;
-        Stack(): LinkedList::LinkedList(size){}
+        int numNodes; //maximum number of nodes
+        Stack(): LinkedList::LinkedList(numNodes){}
 
-        void push(int x){
-
+        void push(Node x){
+            int currentSize = this->LLSize(); 
+            this->insert(x, currentSize);
         }
 
         void pop(){
-
+            int currentSize = this->LLSize(); 
+            this->del(currentSize);
         }
 
         int peek(){
-            
+            int currentSize = this->LLSize();             
+            Node fn = this->firstNode(); 
+            return this->nthNode(fn,currentSize).value;
         }
 
         bool isEmpty(){
-
+            Node fn = this->firstNode(); //head
+            Node& nextNode = *fn.pointer;
+            // check if it's tail 
+            return nextNode.pointer == nullptr; 
         }
 
         int size(){
-
+            int currentSize = this->LLSize();             
+            return currentSize; 
         }
 };
+
+class StackArray{
+    public:
+        vector<int> arr; 
+        
+        StackArray(int s){
+            this->arr = {}; 
+        }
+
+        void push(int x){
+            arr.push_back(x); 
+        }
+
+        void pop(){
+            arr.pop_back(); 
+        }
+
+        int peek(){ //returnt the last element (that is about to be popped)
+            return arr[arr.size()-1];
+        }
+
+        bool isEmpty(){
+            return arr.size() == 0; 
+        }
+
+        int size(){
+            return arr.size(); 
+        }
+
+
+}; 
+
+class Queue: public LinkedList{ //FIFO
+    public:
+        Queue(int ne): LinkedList::LinkedList(ne){}
+
+
+        void enqueue(Node x){ //add element at the end (or start)
+            int currentSize = this->LLSize();             
+            this->insert(x,currentSize); 
+        }
+
+        void dequeue(){ //remove element at the start (or end)
+            this->del(1);
+        }
+
+        int peek(){ //return first element (that is about to get dequeued)
+            Node fn = this->firstNode(); 
+            return this->nthNode(fn,1).value;
+        }
+
+        bool isEmpty(){
+            int currentSize = this->LLSize();             
+            return currentSize == 0; 
+        }
+
+        int size(){
+            int currentSize = this->LLSize();             
+            return currentSize; 
+        }
+
+};
+
+
+
+class HashTable{
+
+}; 
 
 
 ostream& operator<<(ostream& os, const vector<int>& arr){
