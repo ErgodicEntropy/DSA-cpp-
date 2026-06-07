@@ -43,6 +43,7 @@ using namespace std;
 ///3- Precision: the accuracy of the algorithmic result as a percentage
 ///4- Space Compelxity
 ///5- Correctness: the algorithm converges.
+///6- Conditions: the hypotheses or constraints that the algorithm works under e.g., binary search requires sorted arrays, etc.
 
 
 // Family of algorithms: DSA, ML/DL, OR, NA, Artificial Life
@@ -53,7 +54,7 @@ using namespace std;
 //Algorithm Design
 
 ///1- There is no generic procedure to solve problems i.e., there is no meta-algorithm to create algorithms
-///2- Practice designing algorithms
+///2- Practice designing algorithms (problem-solving theory)
 ///3- Algorithmic toolbox: brute force, standard tools, heuristics/meta-heuristics, and magic insight
 ///4- No Free lunch theorem
 
@@ -557,6 +558,9 @@ class LinkedList{
         }
 };
 
+// Doubly Linked List
+// Circular Linked List
+
 // For stacks, it's more memory-efficient to use arrays except for the edge of case of resizing due to its fixed size.
 class Stack: public LinkedList{//LIFO
     public:
@@ -654,10 +658,54 @@ class Queue: public LinkedList{ //FIFO
 
 };
 
+// Priority Queue 
+// Circular Queue
 
+
+// Hash Table is a dynamic, linear and built-in data structure with a non-contiguous data storage with hetergeneous elements that are unordered, non-modifiable (immutable) and non-replicable (unique).
+
+// Hash Table stores the elements of another data structure in element-index correspondence using hash function: element -> hash code 
+
+// The elements of a hash table or set are called buckets i.e., containers of a combination of elements of a given input data structure. Buckets are implemented using linked lists or arrays.
+
+// Hash collision: when two or more elements have the same hash code in the hash table or set -> solution: chaining: create a bucket for the hash index in question as a linked list or array.
+
+// Hash table makes search/add/delete operations efficient because each time the hash code is (re)generated on the fly from input element
 
 class HashTable{
+    public:
+        vector<vector<char>> inputArray;
+        map<int,vector<vector<char>>> hs; //hash set (a form of hash table for storing large number of elements)
+        
+        HashTable(vector<vector<char>> ia){
+            this->inputArray = ia;
+        }
 
+        int hashIndex(int k){ //hash function + chaining (hash collision resolution)
+            int c = 0; //hash index or hash code
+            vector<char> arr = this->inputArray[k];
+            for (char x: arr){
+                int y = static_cast<int>(x); //downcast using static casting: char -> unicode charset (decimal)
+                c+= y%10; 
+            }
+            hs[c].push_back(arr); 
+
+            return c; 
+        }
+
+
+        void search(vector<char> x){
+
+        }
+        
+        void add(int x){
+            
+        }
+
+        void remove(char x){
+            
+        }
+     
 }; 
 
 
