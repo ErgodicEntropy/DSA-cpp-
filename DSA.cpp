@@ -8,6 +8,7 @@
 #include <functional>
 #include <cmath>
 #include <span>
+#include <ranges>
 using namespace std;
 
 
@@ -351,7 +352,16 @@ vector<int> bucketSort(vector<int> arr){ //hypothesis: array elements are floats
 }
 
 
-////Search: no need to implement linear, binary or n-ary search
+////Search:
+
+int linearSearch(vector<vector<char>> arr, vector<char> e){
+    for (int k = 0; k < arr.size(); k++){
+        if (arr[k] == e){
+            return k;
+        }
+    }
+    return -1; 
+}
 
 int binarySearch(vector<int> arr, int e){
     int N = arr.size();
@@ -421,6 +431,92 @@ int exponentialSearch(vector<int> arr, int e){ //assuming a sorted array, works 
         }
     }
 }
+
+// Dynamic arrays are hybrid between the dynamicity of linked lists and the contintuity of arrays e.g., ArrayList (Java), List (Python), Vector (C++), Array (php)
+// Dynamic arrays implement the List interface along with Linked Lists.
+class DynamicArray{ //a dynamic implementation of arrays: it behaves like an array as long as size isn't exceeded. Once exceeded, a new array is created!
+
+    int size; //current size
+    vector<int[5]> arrs;     
+    inline int static arrayIndexer = 0; 
+
+    DynamicArray(){
+        this->size = 0; 
+        int arr[5]; //initial inventory array (5 as an array-step example)
+        arrs.push_back(arr); 
+    }
+
+    void createArray(){ //in case of need for resizing (inventory array size exceeded); a new static array is created
+        int arr[5]; //using arrays of 5
+        arrs.push_back(arr); 
+    }
+
+    void append(int x){ //add at the end
+        if (size > 4 + DynamicArray::arrayIndexer*5){  
+            this->createArray();      
+            DynamicArray::arrayIndexer++; 
+        }
+        arrs[DynamicArray::arrayIndexer][size] = x;
+        this->size++; 
+
+    }
+
+    void add(int x, int index){
+        if (index == this->size){
+            append(x);
+        }
+        int lastVal = arrs[floor((this->size-1)/5)][(this->size-1)%5];
+        
+        for (int k = this->size-1; k >= index+1; k++){ //switching for contininity preservation
+            arrs[floor(k/5)][k%5] = arrs[floor(k-1/5)][k-1%5]; //jumps implicitly handled
+        }
+
+        //only replace after switching
+        arrs[floor(index/5)][index%5] = x; 
+        this->size++;   
+        
+        //append last value
+        append(lastVal);
+    }
+
+    int get(int i){ //index i
+        if (i > this->size - 1){
+            return NULL; 
+        }
+        return arrs[floor(i/5)][i%5]; 
+    }
+
+    void set(int i, int newVal){
+        if (i > this->size - 1){
+            return; 
+        }
+        arrs[floor(i/5)][i%5] = newVal; 
+    }
+
+    void remove(int i){
+        if (i > this->size - 1){
+            return; 
+        }
+
+        arrs[floor(i/5)][i%5] = NULL; 
+        this->size--; 
+
+        for (int k = i+1; k < this->size; k++){ //switching for contininity preservation
+            arrs[floor(k-1/5)][k-1%5] = arrs[floor(k/5)][k%5]; //jumps implicitly handled
+        }
+    }
+
+    void clear(){  
+        for (int k = 0; k < this->size; k++){
+            remove(k); 
+        }
+    }
+
+    int size(){
+        return this->size;
+    }
+
+}; 
 
 
 // Linked List: dynamic data structure with non-contiguous data storage based on data values and link pointers.
@@ -664,49 +760,163 @@ class Queue: public LinkedList{ //FIFO
 
 // Hash Table is a dynamic, linear and built-in data structure with a non-contiguous data storage with hetergeneous elements that are unordered, non-modifiable (immutable) and non-replicable (unique).
 
-// Hash Table stores the elements of another data structure in element-index correspondence using hash function: element -> hash code 
-
-// The elements of a hash table or set are called buckets i.e., containers of a combination of elements of a given input data structure. Buckets are implemented using linked lists or arrays.
+// Hash Table stores the elements of another data structure in element-index N-1 correspondence using hash function: element -> hash code 
 
 // Hash collision: when two or more elements have the same hash code in the hash table or set -> solution: chaining: create a bucket for the hash index in question as a linked list or array.
 
 // Hash table makes search/add/delete operations efficient because each time the hash code is (re)generated on the fly from input element
 
-class HashTable{
+// Hash Set implementation:
+
+// The elements of a hash set are called buckets i.e., containers of a combination of elements of a given input data structure. Buckets are implemented using linked lists or arrays.
+class HashSet{
     public:
-        vector<vector<char>> inputArray;
         map<int,vector<vector<char>>> hs; //hash set (a form of hash table for storing large number of elements)
-        
-        HashTable(vector<vector<char>> ia){
-            this->inputArray = ia;
-        }
 
-        int hashIndex(int k){ //hash function + chaining (hash collision resolution)
-            int c = 0; //hash index or hash code
-            vector<char> arr = this->inputArray[k];
-            for (char x: arr){
-                int y = static_cast<int>(x); //downcast using static casting: char -> unicode charset (decimal)
-                c+= y%10; 
+        void add(vector<char> x){ 
+            int hc = 0; //hash index or hash code
+            for (char x: x){ //hash function
+                int y = static_cast<int>(x); //downcast using static casting: char -> unicode code point (decimal)
+                hc+= y%10; 
             }
-            hs[c].push_back(arr); 
 
-            return c; 
+            hs[hc].push_back(x); //chaining (hash collision resolution) using array-built buckets
         }
 
+        int search(vector<char> x){
+            // regenerate its hash code on the fly
+            int hc = 0; 
+            for (char x: x){ //hash function
+                int y = static_cast<int>(x); //downcast using static casting: char -> unicode code point (decimal)
+                hc+= y%10; 
+            }
+            
+            if (hs[hc].size() != 0){ //if the bucket is not empty
+                return hc; 
+            }
 
-        void search(vector<char> x){
-
+            return -1;
         }
         
-        void add(int x){
-            
+        void remove(vector<char> x){
+            // regenerate its hash code on the fly
+            int hc = 0; 
+            for (char x: x){ //hash function
+                int y = static_cast<int>(x); //downcast using static casting: char -> unicode code point (decimal)
+                hc+= y%10; 
+            }
+
+            if (hs[hc].size() != 0){ //if the bucket is not empty
+                int index = linearSearch(hs[hc],x); 
+                hs[hc].erase(hs[hc].begin()+index); 
+            }
         }
 
-        void remove(char x){
-            
+        void clear(){
+            for (const auto& [_, val]: hs){
+                vector<vector<char>> bucket = val;
+                for (vector<char> x: bucket){
+                    remove(x); 
+                } 
+            }
         }
-     
+
+        bool contains(vector<char> x){
+            // regenerate its hash code on the fly
+            int hc = 0; 
+            for (char x: x){ //hash function
+                int y = static_cast<int>(x); //downcast using static casting: char -> unicode code point (decimal)
+                hc+= y%10; 
+            }
+
+            if (hs[hc].size() != 0){ //if the bucket is not empty
+                return true;
+            }
+
+            return false; 
+
+        }
 }; 
+
+class HashMap{
+    map<int,string> hm; 
+
+    int hash(int key){ //hash function returns hash code       
+        if (key < 10){
+            return key; //evenly distributed in this case, otherwise all pour to zero.
+        }
+
+        int numDigits = 1;
+        int temp = floor(key/10); 
+        while (temp != 0){
+            numDigits++; 
+            temp = floor(key/10);         
+        }
+
+        int sumDigits = 0; //miniaturization
+        for (int k = 0; k < numDigits; k++){
+            int kthDigit = (int)floor(key/pow(10,k))%10;
+            sumDigits+= kthDigit;
+        }
+
+        return sumDigits%10;
+    }
+
+    void put(int key, string value){
+        int hashCode = hash(key);
+        hm[hashCode] = value; 
+    }
+
+    string get(int key){
+        int hashCode = hash(key);
+        return hm[hashCode]; 
+    }
+
+    void remove(int key){
+        int hashCode = hash(key);
+        hm.erase(hashCode);
+    }
+
+    void clear(){
+        for (const auto& [key,_]: hm){
+            remove(key); 
+        }
+    }
+
+    bool containsKey(int key){
+        vector<int> keys = this->keySet(); 
+        for (int k: keys){
+            if (key == k) return true;
+        }
+        return false; 
+    }
+
+    vector<int> keySet(){
+        vector<int> keys; 
+        for (const auto& [key,_]: hm){
+            keys.push_back(key);
+        }
+        return keys; 
+    }
+    
+    
+    vector<string> values(){
+        vector<string> vals; 
+        for (const auto& [_, val]: hm){
+            vals.push_back(val);
+        }
+        return vals; 
+
+    }
+
+    int size(){
+        int s = 0;
+        for (const auto& [_,_]: hm){
+            s++; 
+        }
+        return s;
+    }
+};
 
 
 ostream& operator<<(ostream& os, const vector<int>& arr){
