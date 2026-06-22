@@ -363,6 +363,17 @@ int linearSearch(vector<vector<char>> arr, vector<char> e){
     return -1; 
 }
 
+int linearSearch(vector<int> arr, int e){
+    if (arr.size() == 0) return -1; 
+    
+    for (int k = 0; k < arr.size(); k++){
+        if (arr[k] == e){
+            return k;
+        }
+    }
+    return -1; 
+}
+
 int binarySearch(vector<int> arr, int e){
     int N = arr.size();
     int low = 0;
@@ -918,6 +929,278 @@ class HashMap{
     }
 };
 
+
+// A graph is a non-linear, dynamic and non-built-in data structure with homogeneous, mutable and replicable elements (DSA definition)
+// A graph is a collection or tuple of vertices (nodes) and edges (binary relations over the set of vertices) denoted as (V,E), governed by an incidence function f: E -> V x V or adjancency function A: V / E -> N
+    // Two edges are adjacent if they share or are incident to a common vertex i.e., f(e) \in f(r) or A(e,r) = 1
+    // Two vertices are adjacent if they are joined by an edge i.e., A(u,v) = 1 or f(e) = uv for a given edge e. 
+    // An edge e and a vertex v are incident if f(e) = vu for a given vertex u.  
+
+// Glossary & Terminology:
+
+// A graph has two fundamental components:
+    // Vertices (Nodes): the most rudimentary data points i.e., they contain graph data.
+        // Properties: Weight, Degree, Neighborhood.
+        // Types: isolated, weighted, source, sink. 
+    // Edges: a binary relation over the set of vertices i.e., a link that joins a pair of vetices called its ends.
+        // Properties: Weight, Directionality, etc.
+        // Types: link (simple edge: arete), loop, parallel, arrow (directed edge: arc)
+    // Traversal: 
+        // Walk: a sequence of edges such that each edge is adjacent to the previous edge and to the next edge.
+            // Open Walk: a walk where the last vertex isn't identical to the first vertex
+            // Closed Walk: a wak where the last vertex is identical to the first vertex, forming a cycle or circuit.
+            // Undirected Walk: a walk with symmetrical edges between a pair of nodes -> chain.
+            // Directed Walk: a walk with asymmetrical edges between a pair of nodes -> chemin.
+            // Elementary Walk: a walk where every vertex is visited at most once i.e., either 0 or 1 -> trail
+            // Simple Walk: a walk where every edge is visited at most once i.e., either 0 or 1 -> path
+            // Eulerian Walk: a walk where every edge is visited exactly once.
+            // Hamiltonian Walk: a walk where every vertex is visited exactly once.
+            // Cycle: a closed simple walk (closed path): directed or undirected.
+            // Circuit: a closed elementary walk (closed trail): directed or undirected.
+// A graph has many properties:
+    // General: Order, Size, Degree, Connectivity (Connected Components), Topology, Topological Ordering, Cross Number, Embedding
+    // Extremal Graph theory: Graph Coloring, Chromatic Number, Chromatic Index, Dominating Set, Clique, Independent Set, Vertex Cover, Matching, Ramsey Number
+    // Line Graph
+    // Complementary Graph
+    // Subgraphs: co-cycle & co-circuit, E(W), induced, partial, spanning tree.
+    // Minors
+    // Isomorphic Graphs
+// A graph has many topologies (family of graphs):
+    // Directed (Digraph) vs Undirected, Cyclical vs Acyclical (DAG, Path Graph, Cycle Graph), Weighted vs Unweighted
+    // Null, Trivial, Finite
+    // Simple
+    // Empty, Complete (Clique), Bipartite (k-partite)
+    // Complete Bipartite, Star
+    // Connected (Strongly vs Weakly), Tree
+    // k-regular, planar
+    // Hypergraph, Multigraph, Pseudograph
+    // Eulerian Graph
+    // Hamiltonian Graph
+    // Turan Graph
+    // Petersen Graph
+    // Erdos-Renyi Graph
+    // Hypercube Graph
+
+int sum(vector<int> arr){
+    int s = 0;
+    for (int x:arr) s+=x;
+    return s; 
+}
+
+vector<int> operator-(vector<int> arr1, vector<int> arr2){
+    vector<int> diffArr = {};
+    for (int x: arr1){
+        if (linearSearch(arr2,x) == -1){
+            diffArr.push_back(x); 
+        }
+    }
+    return diffArr; 
+}
+class Graph{
+    
+    map<int,vector<int>> adjList; //map linking each vertex with its neighborhood dynamic array -> the simplest tabular representation
+    vector<int> Nodes;
+    int maxDegree; //the maximal degree of the graph shouldn't exceed the maxDegree
+    int maxOrder; //number of nodes in the graph shouldn't exceed the max order
+    int maxSize; //number of edges in the graph shouldn't exceed the max size
+     
+    Graph(){
+        this->Nodes = {};
+    }
+
+    void addNode(int k){
+        if (this->getOrder() < maxOrder){
+            this->Nodes.push_back(k); 
+            return;
+        }
+
+        cout << "maximum order reached!";
+    }
+
+    void addEdge(int k, int l){
+        if (this->getSize() < maxSize && linearSearch(Nodes,k) > 0 && linearSearch(Nodes,l) > 0){ //verify if the graph contains the nodes
+            adjList[k].push_back(l);
+            adjList[l].push_back(k);
+            return;
+        }
+
+        cout << "maximum size reached!";
+    }
+
+    int nodeDegree(int k){
+        return adjList[k].size(); 
+    }
+
+    vector<int> nodeNeighborhood(int k){
+        return adjList[k]; 
+    }
+
+    int getNodeMaxDeg(){
+        int maxNode = Nodes[0];
+        int DELTA = adjList[Nodes[0]].size();
+        for (int n : Nodes){
+            if (DELTA < adjList[n].size()){
+                maxNode = n;
+                DELTA = adjList[n].size();
+            }
+        }
+        return maxNode;        
+    }
+
+    int getMaxDegree(){
+        int DELTA = adjList[Nodes[0]].size();
+        for (int n : Nodes){
+            if (DELTA < adjList[n].size()){
+                DELTA = adjList[n].size();
+            }
+        }
+        return DELTA;
+    }
+
+    int getAvgDegree(){
+        int degreeSum = 0;
+        for (int n: Nodes){
+            degreeSum += nodeDegree(n);
+        }
+        return degreeSum/this->Nodes.size(); 
+        
+    }
+
+    int getMinDegree(){
+        int delta = adjList[Nodes[0]].size();
+        for (int n : Nodes){
+            if (delta > adjList[n].size()){
+                delta = adjList[n].size();
+            }
+        }
+        return delta;
+
+    }
+
+    int getOrder(){
+        return Nodes.size(); 
+    }
+
+    int getSize(){
+        // handshake lemma
+        int degreeSum = 0;
+        for (int n: Nodes){
+            degreeSum += nodeDegree(n);
+        }
+        return degreeSum/2; 
+    }
+
+    vector<vector<int>> ConnectedComponents(){ //connectivity is a transitive, symmetrical (undirected graph) binary relation
+        // a good space reduction heuristic is to start with the node of maximum degree.
+        vector<vector<int>> CC;
+        int x = getNodeMaxDeg(); 
+        vector<int> BFS = this->BFS(x); 
+        CC.push_back(BFS); //starting from the assumption that the graph is connected until proven otherwise i.e., size = 1
+        vector<int> CBFS = this->Nodes - BFS; 
+        while (CBFS.size() != 0){
+            CC.push_back(CBFS);
+            int node = CBFS[0];
+            CBFS = this->Nodes - this->BFS(node);
+        }    
+        return CC; 
+    }
+
+    int nbrConnectedComponents(){
+        vector<vector<int>> CC = this->ConnectedComponents();
+        return CC.size();
+    }
+
+    int connectivity(){
+        vector<vector<int>> CC = this->ConnectedComponents();
+        return this->getOrder() - CC.size();        
+    }
+    bool isConnected(){
+        vector<vector<int>> CC = this->ConnectedComponents();
+        return (CC.size() == 1);
+    }
+
+    //queue: FIFO principle
+    vector<int> BFS(int s){ //index of starting node
+        int root = Nodes[s]; 
+        vector<int> bfs = {root}; 
+        vector<int> queue = {root}; //FIRST ELEMENT -> FIRST TO BE OUSTED 
+        int t = 1;
+        while (t < bfs.size() && bfs.size() < this->getOrder()){
+            for (int x: adjList[root]){ //neighbors
+                if (linearSearch(bfs,x) == -1){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
+                    bfs.push_back(x); //enqueue current root neighbors
+                    queue.push_back(x); //enqueue current root neighbors
+                }
+            }
+            root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
+            queue.erase(queue.begin()); //dequeue element at index 0 i.e., previous root
+            t++; 
+        }
+        return bfs;
+    }
+
+    // stack: LIFO principle
+    vector<int> DFS(int s){
+        int root = Nodes[s];
+        vector<int> stack = {root};
+        vector<int> dfs = {root}; 
+        vector<int> visited;
+        visited[root] = 1; 
+        int child = root; 
+        int k = 1;
+        while (dfs.size() < this->getOrder()){
+            while (k < adjList[child].size() && adjList[child].size() != 0){ //as long as the child has children
+                if (child == root) child = adjList[root][0]; //runs only once
+                else child = adjList[child][k]; 
+                if (visited[child] != 1){
+                    visited[child] = 1; 
+                    stack.push_back(child);
+                    dfs.push_back(child);
+                    k = 1; 
+                } else { 
+                    k++; 
+                    child = stack[stack.size()-1]; //regress back to the last parent 
+                }
+                stack.pop_back(); 
+                child = stack[stack.size()-1]; //regress back to the last parent 
+                k = 1; //reset
+            }
+        }
+
+        return dfs; 
+    }
+
+    int search(int x){
+        vector<vector<int>> CC = this->ConnectedComponents();
+        for (int k = 0; k < CC.size(); k++){
+            int val = linearSearch(CC[k],x); 
+            if ( val > 0){
+                return val;
+            }
+        }
+        return -1; 
+    }
+    void enumerateNodes(){
+        for (int n: Nodes){
+            cout << n;
+        }
+    }
+
+
+    //Traversal: DFS, BFS
+    //Search: A*
+    //Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall
+    //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
+    //Assignment: Gale-Shapley 
+    //Minimum Spanning Tree: Kruskal, Prim
+    //Topological Sorting (DAG)
+    //Minimum Cut problems
+    //Covering problems
+    //Packing problems
+    //Eulerian/Hamiltonian Path/Tours
+    //Coloring problems
+    //Drawing problems: planarity, cross number, etc.
+};
 
 ostream& operator<<(ostream& os, const vector<int>& arr){
     for (int k = 0; k < arr.size(); k++){
