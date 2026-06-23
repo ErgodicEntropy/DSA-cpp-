@@ -1183,35 +1183,34 @@ class Graph{
         return dfs; 
     }
 
-    bool cycleDetection(int s){ //starting index
+    vector<int> cycleDetection(int s){ //starting index
         int root = Nodes[s]; 
         vector<int> bfs = {root}; 
         map<int,int> parent;
-        int t = 1;
-        while (bfs.size() < this->getOrder() + 1){
-            if (replica(bfs)) return true;
+        int t = 1; 
+        while (t <bfs.size() && bfs.size() < this->getOrder() + 1){ //search up to n + 1. That +1 is due to the pigeonhole principle: is there a vertex that is visited more than once? i.e., is there a redundant edge that revisits a vertex already in the bfs or visits a new vertex?.
             for (int x: adjList[root]){ //neighbors
                 parent[x] = root; //last neighbor that x came from
                 if (x != parent[root]){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
                     bfs.push_back(x); //enqueue current root neighbors
                 }
             }
+            if (replica(bfs)) return bfs; //bfs is a cycle
             root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
-            t++; 
+            t++;
         }
-        return false; 
+        return bfs; 
     }
 
     bool isCyclical(){ //assuming the graph is connected !
-        //By the pigeonhole principle: if m: 0 -> n-1, no cycles exist. Otherwise, at least one cycle exists: cycles are path redundancies (non-injective) i.e., if there are as many edges as vertices or more (m >= n), then surely a vertex is visited more than once.
+        //By the pigeonhole principle: if m: 0 -> n-1, no cycles exist. Otherwise, at least one cycle exists: cycles are path redundancies (non-injective) i.e., if there are as many edges as vertices or more (m >= n), then surely a vertex is visited more than once i.e., both a start vertex and an end vertex.
         int m = this->getSize();
         int n = this->getOrder();
         return (m >= n);
     }
 
     /// Search
-
-    int search(int x){ //A*
+    int search(int x){ 
         vector<vector<int>> CC = this->ConnectedComponents();
         for (int k = 0; k < CC.size(); k++){
             int val = linearSearch(CC[k],x); 
@@ -1222,13 +1221,41 @@ class Graph{
         return -1; 
     }
 
+    int searchEfficient(int e){
+        int root = Nodes[0]; 
+        if (e == root) return 0; 
+        vector<int> bfs = {root}; 
+        int t = 1;
+        while (t < bfs.size() && bfs.size() < this->getOrder()){
+            for (int x: adjList[root]){ //neighbors
+                if (linearSearch(bfs,x) == -1){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
+                    bfs.push_back(x); //enqueue current root neighbors
+                }
+            }
+            if (linearSearch(bfs,e) > 0) return linearSearch(bfs,e); 
+            root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
+            t++; 
+        }
+        return -1;
+    }
+
     ///Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall
 
     void Dijkstra(int source, int destination){
 
     }
 
+    void BellmanFord(int source, int destination){
 
+    }
+
+    void FloydWarshall(int source, int destination){
+
+    }
+
+    void Astar(int source, int destination){
+
+    }
     //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
     //Assignment: Gale-Shapley 
     //Minimum Spanning Tree: Kruskal, Prim
