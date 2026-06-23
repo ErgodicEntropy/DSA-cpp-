@@ -996,6 +996,16 @@ vector<int> operator-(vector<int> arr1, vector<int> arr2){
     }
     return diffArr; 
 }
+
+bool replica(vector<int> arr){
+    for (int k = 0; k < arr.size()-1; k++){
+        for (int j = k+1; j < arr.size(); j++){
+            if (arr[k] == arr[j]) return true; 
+        }
+    }
+    return false; 
+}
+
 class Graph{
     
     map<int,vector<int>> adjList; //map linking each vertex with its neighborhood dynamic array -> the simplest tabular representation
@@ -1119,6 +1129,9 @@ class Graph{
         return (CC.size() == 1);
     }
 
+    /// Traversal: DFS, BFS
+
+
     //queue: FIFO principle
     vector<int> BFS(int s){ //index of starting node
         int root = Nodes[s]; 
@@ -1170,7 +1183,35 @@ class Graph{
         return dfs; 
     }
 
-    int search(int x){
+    bool cycleDetection(int s){ //starting index
+        int root = Nodes[s]; 
+        vector<int> bfs = {root}; 
+        map<int,int> parent;
+        int t = 1;
+        while (bfs.size() < this->getOrder() + 1){
+            if (replica(bfs)) return true;
+            for (int x: adjList[root]){ //neighbors
+                parent[x] = root; //last neighbor that x came from
+                if (x != parent[root]){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
+                    bfs.push_back(x); //enqueue current root neighbors
+                }
+            }
+            root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
+            t++; 
+        }
+        return false; 
+    }
+
+    bool isCyclical(){ //assuming the graph is connected !
+        //By the pigeonhole principle: if m: 0 -> n-1, no cycles exist. Otherwise, at least one cycle exists: cycles are path redundancies (non-injective) i.e., if there are as many edges as vertices or more (m >= n), then surely a vertex is visited more than once.
+        int m = this->getSize();
+        int n = this->getOrder();
+        return (m >= n);
+    }
+
+    /// Search
+
+    int search(int x){ //A*
         vector<vector<int>> CC = this->ConnectedComponents();
         for (int k = 0; k < CC.size(); k++){
             int val = linearSearch(CC[k],x); 
@@ -1180,16 +1221,14 @@ class Graph{
         }
         return -1; 
     }
-    void enumerateNodes(){
-        for (int n: Nodes){
-            cout << n;
-        }
+
+    ///Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall
+
+    void Dijkstra(int source, int destination){
+
     }
 
 
-    //Traversal: DFS, BFS
-    //Search: A*
-    //Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall
     //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
     //Assignment: Gale-Shapley 
     //Minimum Spanning Tree: Kruskal, Prim
