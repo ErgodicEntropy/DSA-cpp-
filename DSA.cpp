@@ -1009,6 +1009,7 @@ bool replica(vector<int> arr){
 class Graph{
     
     map<int,vector<int>> adjList; //map linking each vertex with its neighborhood dynamic array -> the simplest tabular representation
+    vector<vector<int>> adjMat;
     vector<int> Nodes;
     int maxDegree; //the maximal degree of the graph shouldn't exceed the maxDegree
     int maxOrder; //number of nodes in the graph shouldn't exceed the max order
@@ -1027,10 +1028,12 @@ class Graph{
         cout << "maximum order reached!";
     }
 
-    void addEdge(int k, int l){
+    void addEdge(int k, int l, int weight=1){
         if (this->getSize() < maxSize && linearSearch(Nodes,k) > 0 && linearSearch(Nodes,l) > 0){ //verify if the graph contains the nodes
             adjList[k].push_back(l);
             adjList[l].push_back(k);
+            adjMat[k][l] = weight;
+            adjMat[l][k] = weight;
             return;
         }
 
@@ -1239,10 +1242,45 @@ class Graph{
         return -1;
     }
 
-    ///Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall
+    ///Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall, A*
+    int MapMin(map<int,vector<int>> m, vector<int> visited){
+        int mi = INFINITY;
+        int k;
+        for (const auto& [key,_]: m){
+            if (mi > m[key][0] && linearSearch(visited, key) == -1){
+                mi = m[key][0];
+                k = key; 
+            }
+        }
+        return k; 
+    }
 
-    void Dijkstra(int source, int destination){
-
+    vector<vector<int>> Dijkstra(int source, int destination){ //start with all distances as INF except source with 0 -> compute cumulative distance -> relaxation/previous source node if possible, else skip -> greedy local choice -> tabu/visited
+        vector<vector<int>> shortPath = {{0,source}};
+        vector<int> visited = {source};
+        map<int,vector<int>> distance;
+        distance[source] = {0,source};
+        for (int n: Nodes-visited) distance[n][0] = INFINITY;
+        int sumDist = 0; 
+        int currentNode = source;
+        int t = 1; 
+        while (visited.size() < this->getOrder() && linearSearch(visited, destination) == -1){
+            for (int neighbor: adjList[currentNode]){
+                if (linearSearch(visited,neighbor) == -1){
+                    int dist = adjMat[currentNode][neighbor] + sumDist; //cumulative distance = current distance + cumulative residual
+                    if (dist < distance[neighbor][0]) distance[neighbor] = {dist, currentNode}; //relaxation + previous source node => relaxation corrects greedy error                
+                }
+            }   
+            currentNode = MapMin(distance,visited); //greedy local optimization
+            visited.push_back(currentNode); //tabu: mark as visited
+            sumDist = distance[currentNode][0]; //reset of cumulative residual if no better path is found 
+            t++; 
+        }
+        int nextNode = source; 
+        for (const auto& [key,_]: distance){
+            if (linearSearch(distance[key],nextNode) && key != nextNode) shortPath.push_back(distance[key]);
+        }
+        return shortPath; 
     }
 
     void BellmanFord(int source, int destination){
@@ -1258,7 +1296,65 @@ class Graph{
     }
     //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
     //Assignment: Gale-Shapley 
+    
     //Minimum Spanning Tree: Kruskal, Prim
+    
+    //Spanning Tree is a subgraph in a graph G that is a tree (connected + acylical) that contains all vertices of G.
+    //Minimal Spanning Tree: a spanning tree that doesn't contain or is a superset of any other spanning tree.
+    //Minimum Spanning Tree: a spanning tree with the smallest cumulative weight of edges.
+    bool checker(vector<vector<int>> arr, vector<int> target){
+        for (vector<int> a: arr){
+            if ((a[0] == target[0] && a[1] == target[1]) && (a[0] == target[1] && a[1] == target[0])){
+                return true;
+            }
+        }
+        return false; 
+    }
+
+    vector<vector<int>> Kruskal(){//effective number of edges in the subgraph shouldn't exceed n-1 or else it produces a cycle (pigeonhole principle)  
+        int n = this->getOrder();
+        vector<vector<int>> edges; 
+        for (int n: Nodes){
+            for (int k: adjList[n]){
+                if (checker(edges, {n,k})) edges.push_back({n,k}); 
+            }
+        }
+        vector<int> edgeWeights;
+        for (vector<int> edge: edges){
+            edgeWeights.push_back(adjMat[edge[0]][edge[1]]);
+        }
+        edgeWeights = selectionSort(edgeWeights); 
+        
+        for (int k = 0; k < edgeWeights.size(); k++){
+            for (int j = 0; j < edges.size(); j++){
+                vector<int> edge = edges[j];
+                if (adjMat[edge[0]][edge[1]] == edgeWeights[k]){
+                    vector<int> z = edges[k]; 
+                    edges[k] = edges[j];
+                    edges[j] = z;
+                }
+            }
+        }
+
+        vector<int> disjointSet; //contains the vertices of the graph
+        vector<vector<int>> MST; //set that stores the edges (pair of vertices) of the spanning tree 
+        int t = 0; 
+        while (disjointSet.size() < n || MST.size() < n-1){//no need to check for both conditions: if a graph is connected & acyclical, then n nodes are joined by exactly n-1 edges, no more (due to acyclical) no less (due to connected). 
+            vector<int> edge = edges[t];
+            MST.push_back(edge);
+            if (linearSearch(disjointSet,edge[0]) == -1) disjointSet.push_back(edge[0]);
+            if (linearSearch(disjointSet,edge[1]) == -1) disjointSet.push_back(edge[1]);
+            t++; 
+        }
+
+        return MST;
+    }
+
+
+    void Prim(){
+
+    }
+
     //Topological Sorting (DAG)
     //Minimum Cut problems
     //Covering problems
