@@ -1311,6 +1311,7 @@ class Graph{
         return false; 
     }
 
+    // Krusal algorithm builds the minimum spanning tree edge-by-edge (fit for sparse graphs)
     vector<vector<int>> Kruskal(){//effective number of edges in the subgraph shouldn't exceed n-1 or else it produces a cycle (pigeonhole principle)  
         int n = this->getOrder();
         vector<vector<int>> edges; 
@@ -1350,9 +1351,25 @@ class Graph{
         return MST;
     }
 
-
-    void Prim(){
-
+    // Prim algorithm builds the minimum spanning tree node-by-node (fit for dense graphs)
+    vector<int> Prim(){
+        vector<int> MST; //the elements of the Prim MST are vertices (nodes) such that two consecutive nodes are necessarily adjacent and joined by the minimum-weight edge of the first node i.e., Prim MST is a minimum-weight path with k vertices and k-1 edges.
+        vector<int> outNodes = Nodes - MST;
+        while (MST.size() < this->getOrder()){ //this also ensures that no cycles are formed; in a connected graph (m>=n-1), a graph is acylical <=> m = n-1 (m > n-1 are eliminated) 
+            int currentNode = outNodes[0]; //center on an unvisited node: tabu mechanism on next chosen nodes
+            MST.push_back(currentNode);
+            int outNode = currentNode; 
+            int distance = INFINITY; 
+            for (int n: adjList[currentNode]){
+                if (distance > adjMat[currentNode][n] && linearSearch(outNodes, n) > 0){ //outNodes function also as a tabu mechanism on neighbors (no need for visited[k])
+                    distance = adjMat[currentNode][n]; 
+                    outNode = n; 
+                }
+            }
+            if (outNode != currentNode) MST.push_back(outNode);
+            outNodes = Nodes - MST;
+        }        
+        return MST; 
     }
 
     //Topological Sorting (DAG)
