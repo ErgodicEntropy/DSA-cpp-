@@ -1243,42 +1243,71 @@ class Graph{
     }
 
     ///Shortest Path: Dijkstra, Bellman-Ford, Floyd-Warshall, A*
-    int MapMin(map<int,vector<int>> m, vector<int> visited){
-        int mi = INFINITY;
-        int k;
-        for (const auto& [key,_]: m){
-            if (mi > m[key][0] && linearSearch(visited, key) == -1){
-                mi = m[key][0];
-                k = key; 
+    int greedyChoice(int currentNode, vector<vector<vector<int>>> dijkstraTable, vector<int> visited){
+        int dist = INFINITY;
+        int nextNode = NULL; 
+        vector<vector<int>> currentNodeDistances = dijkstraTable[currentNode];
+        for (int neighbor: adjList[currentNode]){
+            if (dist > currentNodeDistances[neighbor][0] && linearSearch(visited, neighbor) == -1){
+                    dist = currentNodeDistances[neighbor][0]; 
+                    nextNode = neighbor;
             }
         }
-        return k; 
+        return nextNode; 
     }
-
-    vector<vector<int>> Dijkstra(int source, int destination){ //start with all distances as INF except source with 0 -> compute cumulative distance -> relaxation/previous source node if possible, else skip -> greedy local choice -> tabu/visited
+    //Dijkstra finds the shortest path from a source node to a destination node and to any other node.
+    vector<vector<int>> Dijkstra(int source, int destination){ //Dijkstra algorithm is 'smart' or explorative greedy algorithm = Greedy Choice algorithm (exploitation) + Relaxation (exploration) + Cumulative Distance + Backward Path Construction
+        //1- start with all distances as INF except source with 0
+        //2- Evaluate neighbors: compute cumulative distance to each neighbor of the current node i.e., distance from the source node to the neighbor = distance between current node and neighbor + cumulatiive residual
+        //3- relaxation + replace previous node if possible, else skip => relaxation corrects greedy error i.e., it finds the global minimum from local greedy choices -> exploration
+            //3.1- if there is no relaxation, cumulative distance is redundant i.e., it doesn't matter if the standalone greedy algorithm uses it or not.
+            //3.2- if there is no relaxation, there is no difference between the forward and backward paths: backward path = forward path (greedy exploitation) + relaxation (exploration)
+            //3.3- if there relaxation, then cumulative distance is necessary in case of source-to-destination and source-to-many, but not necessary in many-to-many and many-to-destination
+        //4- tabu mechanism: mark the current node as visited never to be evaluated again (final distance: smallest distance path to reach it) 
+        //5- greedy local choice: choose the next node with the smallest cumulative distance from the current node -> exploitation
+        //6- repeat until all nodes are visited (source-to-many) or the destination node is visited (source-to-destination)
+        vector<vector<vector<int>>> dijkstraTable;
+        for (int n: Nodes){ //1- start with all distances as INF except source with 0
+            if (n!=source) dijkstraTable[source][n] = {(int)INFINITY};
+            else dijkstraTable[source][n] = {0}; 
+        }
+        vector<int> visited;
         vector<vector<int>> shortPath = {{0,source}};
-        vector<int> visited = {source};
-        map<int,vector<int>> distance;
-        distance[source] = {0,source};
-        for (int n: Nodes-visited) distance[n][0] = INFINITY;
         int sumDist = 0; 
         int currentNode = source;
         int t = 1; 
         while (visited.size() < this->getOrder() && linearSearch(visited, destination) == -1){
-            for (int neighbor: adjList[currentNode]){
-                if (linearSearch(visited,neighbor) == -1){
+            for (int neighbor: adjList[currentNode]){ //2- Evaluate cumulative distance to neighbors
+                if (linearSearch(visited,neighbor) == -1){ 
                     int dist = adjMat[currentNode][neighbor] + sumDist; //cumulative distance = current distance + cumulative residual
-                    if (dist < distance[neighbor][0]) distance[neighbor] = {dist, currentNode}; //relaxation + previous source node => relaxation corrects greedy error                
+                    if (dist < dijkstraTable[currentNode][neighbor][0]) dijkstraTable[currentNode][neighbor] = {dist, currentNode}; //3- relaxation + replace previous node if possible, else skip => relaxation corrects greedy error i.e., it finds the global minimum from local greedy choices                
                 }
             }   
-            currentNode = MapMin(distance,visited); //greedy local optimization
-            visited.push_back(currentNode); //tabu: mark as visited
-            sumDist = distance[currentNode][0]; //reset of cumulative residual if no better path is found 
+            visited.push_back(currentNode); //4- tabu mechanism: mark the current node as visited never to be evaluated again (final distance: smallest distance path to reach it)
+            currentNode = greedyChoice(currentNode,dijkstraTable,visited); //5- greedy local choice: choose the next node with the smallest cumulative distance from the current node
+            for (int n: Nodes){
+                if (linearSearch(visited, n) > 0 && dijkstraTable[visited[visited.size()-1]][n][0] == (int)INFINITY){ //keep visited nodes and evaluated then neighbors intact
+                    dijkstraTable[currentNode][n] = {(int)INFINITY};
+                } else {
+                    dijkstraTable[currentNode][n] = dijkstraTable[visited[visited.size()-1]][n]; //recursive inheritance
+                }
+            }
+            sumDist += dijkstraTable[visited[visited.size()-1]][currentNode][0]; //reset of cumulative residual if no better path is found 
             t++; 
-        }
-        int nextNode = source; 
-        for (const auto& [key,_]: distance){
-            if (linearSearch(distance[key],nextNode) && key != nextNode) shortPath.push_back(distance[key]);
+        } //6- repeat until all nodes are visited (source-to-many) or the destination node is visited (source-to-destination)Q
+
+        // Forward Path is used to evaluate cumulative distances from the source to any other node including the destination 
+        // -> the forward path is not guaranteed to be the shortest path due to greedy choices: it's the path produced by standalone greedy algorithm (i.e., without relaxation)
+        // -> the forward path is the shortest path if the greedy choices are safety choices i.e., 'lucky' choices in which case it's identical to the backward path
+        // -> the backward path is identical to the forward path in absence of relaxation, the forward path is identical to the backward path in presence of safety choices.
+
+        // Backward Path Construction: starting from the destination and back to the source -> backward paths are the shortest paths
+        int node = visited[visited.size()-1]; //starting with destination
+        int t = 1;
+        while (t < this->getOrder()){
+            shortPath.push_back(dijkstraTable[node][node]);
+            node = dijkstraTable[node][node][1]; //update the node to its previous node in the backward path
+            t++;
         }
         return shortPath; 
     }
