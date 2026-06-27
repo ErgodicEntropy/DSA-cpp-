@@ -1029,7 +1029,7 @@ class Graph{
     }
 
     void addEdge(int k, int l, int weight=1){
-        if (this->getSize() < maxSize && linearSearch(Nodes,k) > 0 && linearSearch(Nodes,l) > 0){ //verify if the graph contains the nodes
+        if (this->getSize() < maxSize && linearSearch(Nodes,k) >= 0 && linearSearch(Nodes,l) >= 0){ //verify if the graph contains the nodes
             adjList[k].push_back(l);
             adjList[l].push_back(k);
             adjMat[k][l] = weight;
@@ -1235,7 +1235,7 @@ class Graph{
                     bfs.push_back(x); //enqueue current root neighbors
                 }
             }
-            if (linearSearch(bfs,e) > 0) return linearSearch(bfs,e); 
+            if (linearSearch(bfs,e) >= 0) return linearSearch(bfs,e); 
             root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
             t++; 
         }
@@ -1286,7 +1286,7 @@ class Graph{
             visited.push_back(currentNode); //4- tabu mechanism: mark the current node as visited never to be evaluated again (final distance: smallest distance path to reach it)
             currentNode = greedyChoice(currentNode,dijkstraTable,visited); //5- greedy local choice: choose the next node with the smallest cumulative distance from the current node
             for (int n: Nodes){
-                if (linearSearch(visited, n) > 0 && dijkstraTable[visited[visited.size()-1]][n][0] == (int)INFINITY){ //keep visited nodes and evaluated then neighbors intact
+                if (linearSearch(visited, n) >=0 && dijkstraTable[visited[visited.size()-1]][n][0] == (int)INFINITY){ //keep visited nodes and evaluated then neighbors intact
                     dijkstraTable[currentNode][n] = {(int)INFINITY};
                 } else {
                     dijkstraTable[currentNode][n] = dijkstraTable[visited[visited.size()-1]][n]; //recursive inheritance
@@ -1299,6 +1299,7 @@ class Graph{
         // Forward Path is used to evaluate cumulative distances from the source to any other node including the destination 
         // -> the forward path is not guaranteed to be the shortest path due to greedy choices: it's the path produced by standalone greedy algorithm (i.e., without relaxation)
         // -> the forward path is the shortest path if the greedy choices are safety choices i.e., 'lucky' choices in which case it's identical to the backward path
+        // -> the forward path is exploitative (greedy), the backward path is explorative (relaxation)
         // -> the backward path is identical to the forward path in absence of relaxation, the forward path is identical to the backward path in presence of safety choices.
 
         // Backward Path Construction: starting from the destination and back to the source -> backward paths are the shortest paths
@@ -1312,15 +1313,110 @@ class Graph{
         return shortPath; 
     }
 
-    void BellmanFord(int source, int destination){
+    // Bellman Principle (Dynamic Programming) -> principle of optimal substructure: an optimal solution to the problem is also an optimal solution to any subproblem of the problem (the opposite, that an optiumal solution to subproblems is an optima solution to the problem, is not necessarily true due to submodularity of greedy choices (non-linearity), but true under safety choices where greedy local optimality suffices for global optimality due to its modularity (linearity) 'line up)
+        // Bellman equation: an equation that results from the Bellman principle (principle of optimal substructure). How to find it? Reverse-Engineering (Backpropagation): solve the reverse problem of going from the problem optimal solution to the subproblem optimal solution, instead of the forward problem
+        //1- Assume that you have the optimal solution to the problem
+        //2- Derive a subproblem from the problem based on an intermediary pivot or decision
+            //2.1- the pivot is chosen as the argmin/argmax of the cumulative objective function = argmin/argmax of the immediate cost/reward + objective function on the subproblem (non-linear & global optimality)
+            // Calculating the pivot or decision for the state transition (choosing the optimal subproblem) is exhaustive as it requires backpropagating to examine all possible cases
+            //V(s) = opt_{a \in A(s)}(R(s,a) + V(T(s,a))) [RL=: V(s) =  R(s,a) + gamma * sum(P(s'|s)V(s'))] where:
+                // V is the value, policy function or objective function at state s
+                // opt is either max or min
+                // a is the pivot or decision variable responsible for state transition s -> T(s,a) = s' => A(s) is the decision set of feasible decisions or intermediary pivots to hop on next state
+                // s is the current state (current value of the decision variable)
+                // R(s,a) is the immediate reward or cost between s and a
+                // T(s,a) = s' is the next state after chosing decision a
+                // P(s'|s) is the transition probability from current state s to next state s'
+        //3- Write down the optimal solution of the problem in terms of the optimal solutions of the subproblems on intermediary pivot
+        //4- Treat the subproblem as the problem and repeat
+        //5- Implementation: Due to partial observability, it's not possible to determine the subproblem pivot argmin/argmax or state transition (decision a) a priori in practice. Therefore, incremental relaxation is used i.e., loop through the set of feasible decisions A(s), update V(s) only if a better optimal value is found (relaxation) otherwise keep the best value found so far, repeat until A(s) is exhausted. The incremental relaxation can be performed in two ways:
+            // Iterative Bottom-up (+ tabulation for overlapping subproblems) until the A(s) is exhausted out.
+            // Recursive Top-down (+ memoization for overlapping subproblems) until the base case is reached (recursive leap of faith: correctness of recursion). 
 
-    }
+    // Bellman principle: For every node v, the set of feasible decisions A(v) = N(v)
+    int BellmanFord(int source, int destination){ //Bellman-Ford algorithm handles negative edges unlike the Dijkstra algorithm which doesn't revisit nodes that are marked as visited because, due to positive weights, the cumulative distance can only stay constant or increase.
+        // if there is a negative weight cycle, the shortest path doesn't exist unless edge-visit-once constraint is added (simple walk): return -1 -> proof: proof by contradiction + closed walk aggregation invariance: assume there is a shortest path -> traverse the cycle -> short path -> traverse the cycle again -> shorter path -> repeat
+        // if the vertex dest can't be reached, then return 10^8
+        //1- Initialize distance to all vertices to infinity except source with 0
+        //2- Edge Relaxation: for every directed edge from u to its neighbors v (u,v): if d[v] > d[u] + w(u,v), then d[v] = d[u] + w(u,v)
+        //3- Greedy choice; choose the neighbor with least cumulative distance (only used as a traversal mechanism as optimality is ensured by the Bellman principle)
+        //4- Repeat n-1 times
+        //5- Try one more repetition to check for negative weight cycle: if the nth repetition results in a relaxation of the nth edge, if it exists (cycle), i.e., d[N(ln)] > d[ln] + w(N(ln),ln) then there is no short path due to negative weight cycle
+        int n = this->getOrder();
+        vector<vector<int>> shortPath = {{0,0}}; 
+        map<int,int> distance; 
+        for (int j: Nodes){
+            distance[j] = INFINITY;
+        }
+        distance[0] = 0; 
+        int t = 0;
+        int cn = source; 
+        vector<int> visited = {cn};
+        while (t < n){ //run n-1 relaxations + 1 additional relexation for check
+            map<int,int> neighDist; 
+            for (int j: adjList[cn]){
+                if (j != visited[visited.size()-1] && distance[j] > distance[cn] + adjMat[cn][j]){
+                    distance[j] = distance[cn] + adjMat[cn][j]; //relaxation by cumulative distance (Bellman equation; distance[j] = min(distance[j], distance[cn] + weight(cn,j)))
+                    if (t == n-1){ //nth edge relaxation implies a negative weight cycle => no short path exist 
+                        return -1;
+                    }
+                }
+                neighDist[distance[j]] = j;
+            }
+            // greedy choice
+            int k = INFINITY;
+            for (const auto& [key,_]: neighDist){
+                if (k > key) k = key;
+            }
+            cn = Nodes[neighDist[k]]; 
+            visited.push_back(cn); 
+            shortPath.push_back({cn,k}); 
+            t++; 
+        }
 
-    void FloydWarshall(int source, int destination){
+        if (linearSearch(visited,destination) == -1) return pow(10,8); //destination is unreachable
+        else return distance[destination]; 
 
+    }   
+
+    // Bellman principle: For every pair of nodes i and j, the set of feasible decisions A(ij) = k where k is an intermediary node between i and j i.e., k is in the path of i and j
+    int FloydWarshall(int source, int destination){
+        vector<int> bfs = cycleDetection(0);
+        if (replica(bfs)){ //if there is a cycle
+            int weightSum = 0; 
+            for (int k = 0; k < bfs.size();k++){
+                weightSum += adjMat[bfs[k]][bfs[k+1]];
+            }
+            if (weightSum < 0) return -1; //negative weight cycle
+        }
+        
+        vector<vector<int>> distance;
+        for (int i = 0; i < getOrder(); i++){
+            for (int j = 0; j < getOrder(); j++){
+                if (i == j) distance[i][j] = 0; 
+                else if (linearSearch(adjList[i],j) >= 0) distance[i][j] = adjMat[i][j]; //direct nodes
+                else distance[i][j] = INFINITY; //intermediary nodes
+            }
+        }
+        for (int k = 0; k < getOrder(); k++){ //k as the pivot i.e., intermediary node for subproblem construction
+            for (int i = 0; i < getOrder(); i++){ //sources
+                for (int j = 0; j < getOrder(); j++){//destinations
+                    if (distance[i][k] != INFINITY && distance[k][j] != INFINITY) distance[i][j] = min(distance[i][j] , distance[i][k] + distance[k][j]); //Bellman equation
+                    
+                }
+            }
+        }
+
+        return distance[source][destination]; 
     }
 
     void Astar(int source, int destination){
+        map<int,int> f; //f(n) = g(n) + h(n):= movement cost from source to current node + estimated movement cost from current to destination
+
+        int cn = source;
+        for (int n: adjList[cn]){
+
+        }
 
     }
     //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
@@ -1383,14 +1479,14 @@ class Graph{
     // Prim algorithm builds the minimum spanning tree node-by-node (fit for dense graphs)
     vector<int> Prim(){
         vector<int> MST; //the elements of the Prim MST are vertices (nodes) such that two consecutive nodes are necessarily adjacent and joined by the minimum-weight edge of the first node i.e., Prim MST is a minimum-weight path with k vertices and k-1 edges.
-        vector<int> outNodes = Nodes - MST;
+        vector<int> outNodes = Nodes - MST; //outNodes: set of nodes outside of the MST, inNodes: set of nodes witin the MST
         while (MST.size() < this->getOrder()){ //this also ensures that no cycles are formed; in a connected graph (m>=n-1), a graph is acylical <=> m = n-1 (m > n-1 are eliminated) 
             int currentNode = outNodes[0]; //center on an unvisited node: tabu mechanism on next chosen nodes
             MST.push_back(currentNode);
             int outNode = currentNode; 
             int distance = INFINITY; 
             for (int n: adjList[currentNode]){
-                if (distance > adjMat[currentNode][n] && linearSearch(outNodes, n) > 0){ //outNodes function also as a tabu mechanism on neighbors (no need for visited[k])
+                if (distance > adjMat[currentNode][n] && linearSearch(outNodes, n) >= 0){ //outNodes function also as a tabu mechanism on neighbors (no need for visited[k])
                     distance = adjMat[currentNode][n]; 
                     outNode = n; 
                 }
