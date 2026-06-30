@@ -9,6 +9,7 @@
 #include <cmath>
 #include <span>
 #include <ranges>
+#include <random>
 using namespace std;
 
 
@@ -69,7 +70,7 @@ using namespace std;
 //Data Fetching: pointers storing memory addresses of variables
 //Abstract Data Type (ADT): an abstract mathematical model that describes the set of operations and characterstics of the data structure
 ///Characteristics: Order, Immutability, Replicability, Element Homogeneity, Element Size Homogeneity
-///Operations: add/insert, read/access, remove/delete, modify/update, traverse, reverse/invert, sort, search, min/max/sum/mean/size, isEmpty/isFull.
+///Operations: add/insert, read/access, remove/delete, modify/update, traverse/pathfind, reverse/invert, sort, search, min/max/sum/mean/size, isEmpty/isFull.
 
 // Types of Data Structures:
 ///Dynamic vs Static: size changes?
@@ -442,6 +443,41 @@ int exponentialSearch(vector<int> arr, int e){ //assuming a sorted array, works 
         }
     }
 }
+
+//Shuffling
+
+int* FisherYattes(int arr[]){ //aka Knuth shuffling
+    int N = sizeof(arr)/sizeof(arr[0]);
+    
+    // / 1. Obtain a random seed from the hardware
+    random_device rd; 
+    
+    // 2. Initialize the standard mersenne_twister_engine with the seed
+    mt19937 gen(rd()); 
+    
+    int t = N-1;
+
+    // 3. Define the inclusive range [min, max]
+    uniform_int_distribution<int> distrib(1, t-1); 
+    
+    while (t > 0){
+        int le = arr[t]; 
+        
+        // 4. Generate the random number
+        int randomIndex = distrib(gen);
+
+        // 5. out-place exchange
+        int z = arr[randomIndex];
+        arr[randomIndex] = le;
+        le = z; 
+
+        t--; 
+        uniform_int_distribution<int> distrib(1, t-1); 
+    } 
+    
+    return arr; 
+}
+
 
 // Dynamic arrays are hybrid between the dynamicity of linked lists and the contintuity of arrays e.g., ArrayList (Java), List (Python), Vector (C++), Array (php)
 // Dynamic arrays implement the List interface along with Linked Lists.
@@ -1132,8 +1168,7 @@ class Graph{
         return (CC.size() == 1);
     }
 
-    /// Traversal: DFS, BFS
-
+    /// Traversal (Path Finding): DFS, BFS, A* (also a short path algorithm)
 
     //queue: FIFO principle
     vector<int> BFS(int s){ //index of starting node
@@ -1141,7 +1176,7 @@ class Graph{
         vector<int> bfs = {root}; 
         vector<int> queue = {root}; //FIRST ELEMENT -> FIRST TO BE OUSTED 
         int t = 1;
-        while (t < bfs.size() && bfs.size() < this->getOrder()){
+        while (t < bfs.size() && bfs.size() < this->getOrder()){ //assuming the graph is connected, otherwise this condition is always true
             for (int x: adjList[root]){ //neighbors
                 if (linearSearch(bfs,x) == -1){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
                     bfs.push_back(x); //enqueue current root neighbors
@@ -1153,6 +1188,29 @@ class Graph{
             t++; 
         }
         return bfs;
+    }
+
+    // A variant implementation of the BFS for testing connectivity of the graph (both strong and weak connectivity), connectivity between two source-destination vertices, and uses a custom adjacency matrix edges[i][j] as a param
+    vector<int> BFSPathFinder(int source, vector<vector<int>> edges, vector<int> visited = {}){ //is there a path that connects a source to destination ?
+        int root = source; 
+        vector<int> bfs = {root}; 
+        int t = 1;
+        while (t < bfs.size()){ //removed the bfs.size() < n as the connectivity of the graph is not assumed here
+            for (int x: Nodes){
+                if (edges[root][x] > 0){ //directed neighbors (we don't consider edges[x][root])
+                    if (linearSearch(bfs,x) == -1 && linearSearch(visited,x) == -1){ //this line prevents routing loops + replaces visited array implementation: space-time trade-off
+                        bfs.push_back(x); //enqueue current root neighbors
+                    }
+                }
+            }
+            root = bfs[t]; //update root: didn't use the dequeue() method to preserve all elements in the bfs to be returned, otherwise dequeue the bfs and change while to check for all elements visited.
+            t++; 
+        }
+        // in this case, the bfs can tell you a lot; it can:
+            // 1- give you a path of all nodes reachable from the source 
+            // 2- As a result of 1, it can tell you whether there is a path between the source and destination (test if both belong to bfs; destination to be precise)
+            // 3- it can tell you whether the graph is connected or not (compare bfs size to n)
+        return bfs; 
     }
 
     // stack: LIFO principle
@@ -1185,6 +1243,44 @@ class Graph{
 
         return dfs; 
     }
+
+
+    // A variant implementation of the BFS for testing connectivity of the graph (both strong and weak connectivity), connectivity between two source-destination vertices, and uses a custom adjacency matrix edges[i][j] as a param
+    vector<int> DFSPathFinder(int source, vector<vector<int>> edges, vector<int> vis = {}){ //is there a path that connects a source to destination ?
+        int root = source;
+        vector<int> stack = {root};
+        vector<int> dfs = {root}; 
+        vector<int> visited;
+        visited[root] = 1; 
+        int child = root; 
+        int k = 1;
+        while (dfs.size() < this->getOrder()){
+            map<int, vector<int>> adjList;
+            int d = 0;
+            for (int n: Nodes){
+                if (linearSearch(vis, n) == -1 && edges[child][n] > 0) adjList[child].push_back(n); 
+            }
+            while (k < adjList[child].size() && adjList[child].size() != 0){ //as long as the child has children
+                if (child == root) child = adjList[root][0]; //runs only once
+                else child = adjList[child][k]; 
+                if (visited[child] != 1){
+                    visited[child] = 1; 
+                    stack.push_back(child);
+                    dfs.push_back(child);
+                    k = 1; 
+                } else { 
+                    k++; 
+                    child = stack[stack.size()-1]; //regress back to the last parent 
+                }
+                stack.pop_back(); 
+                child = stack[stack.size()-1]; //regress back to the last parent 
+                k = 1; //reset
+            }
+        }
+
+        return dfs; 
+    }
+
 
     vector<int> cycleDetection(int s){ //starting index
         int root = Nodes[s]; 
@@ -1318,7 +1414,7 @@ class Graph{
         //1- Assume that you have the optimal solution to the problem
         //2- Derive a subproblem from the problem based on an intermediary pivot or decision
             //2.1- the pivot is chosen as the argmin/argmax of the cumulative objective function = argmin/argmax of the immediate cost/reward + objective function on the subproblem (non-linear & global optimality)
-            // Calculating the pivot or decision for the state transition (choosing the optimal subproblem) is exhaustive as it requires backpropagating to examine all possible cases
+            //Calculating the pivot or decision for the state transition (choosing the optimal subproblem) is exhaustive as it requires backpropagating to examine all possible cases of A(s) (exploration)
             //V(s) = opt_{a \in A(s)}(R(s,a) + V(T(s,a))) [RL=: V(s) =  R(s,a) + gamma * sum(P(s'|s)V(s'))] where:
                 // V is the value, policy function or objective function at state s
                 // opt is either max or min
@@ -1329,7 +1425,7 @@ class Graph{
                 // P(s'|s) is the transition probability from current state s to next state s'
         //3- Write down the optimal solution of the problem in terms of the optimal solutions of the subproblems on intermediary pivot
         //4- Treat the subproblem as the problem and repeat
-        //5- Implementation: Due to partial observability, it's not possible to determine the subproblem pivot argmin/argmax or state transition (decision a) a priori in practice. Therefore, incremental relaxation is used i.e., loop through the set of feasible decisions A(s), update V(s) only if a better optimal value is found (relaxation) otherwise keep the best value found so far, repeat until A(s) is exhausted. The incremental relaxation can be performed in two ways:
+        //5- Implementation: Due to partial observability, it's not possible to determine the subproblem pivot argmin/argmax or state transition (decision a) a priori in practice. Therefore, incremental relaxation is used i.e., loop through the set of feasible decisions A(s), update V(s) only if a better optimal value is found (relaxation) otherwise keep the best value found so far, repeat until A(s) is exhausted: V(s)_{k+1} = opt(V(s)_{k}, opt_{a \in A(s)}(R(s,a) + V(T(s,a))_{k})). The incremental relaxation can be performed in two ways:
             // Iterative Bottom-up (+ tabulation for overlapping subproblems) until the A(s) is exhausted out.
             // Recursive Top-down (+ memoization for overlapping subproblems) until the base case is reached (recursive leap of faith: correctness of recursion). 
 
@@ -1410,21 +1506,326 @@ class Graph{
         return distance[source][destination]; 
     }
 
+    // Path Finding algorithm on a 2D grid with obstacles
     void Astar(int source, int destination){
-        map<int,int> f; //f(n) = g(n) + h(n):= movement cost from source to current node + estimated movement cost from current to destination
+        map<int,int> f; //f(n) = g(n) + h(n):= movement cost from source to current node + estimated movement cost from current node to destination
 
         int cn = source;
         for (int n: adjList[cn]){
+            f[n] = adjMat[cn][n]; 
+            int h = 0;
+            for (int rn: Nodes - adjList[cn]){
+                if (rn != cn) h+= 0;
+            }
+        }
+    }
 
+    //Flow Optimization: a linear programming optimization problem where the objective function is the flow to be maximized subject to edge capacity constraints
+    //Flow Optimization can be transfer-and-conquered into a linear progrmaming problem and solved with the simplex algorithm
+    //Flow Optimization problem is the primal of the dual Minimum Cut problem -> Max-Flow Min-Cut theorem (Strong Duality theorem): the maximum flow that could be transmitted from source to sink is the capacity of the minimum s-t cut.
+
+    //Augmenting Path: a minimal sequence of edges starting from the source and ending in the sink where the weight of each edge is strictly positive i.e., a path of edges that can transmit or push a (additional) flow from source to sink.
+    //In linear programming terms:
+        // flow is the objective function to be maximized
+        // edge  is the decision variable (as many decision variables as total edges in the original graph)
+        // constraints:
+            // Flow on an edge doesn’t exceed the given capacity of the edge.
+            // An incoming flow is equal to an outgoing flow for every vertex except s (0 in-degree) and t (0 out-degree) => every other node is not a sink or source other than s and t.
+            // Edges should form an augmenting path from source to sink i.e., minimumn number of edges of strictly positive weight/capacity + first edge adjacent to source and last edge adjacent to sink
+            // Interlocking constraints between augmenting paths i.e., set or sequence of edges
+        // A combination of augmenting paths is the pivot or vertex of the feasible region. Going from set of augmenting paths to the next is akin to traversing from one vertex of the feasible region to the next
+
+    //Ford-Fulkerson: optimize the flow from a source to a sink subject to edge capacity constraints in a directed weighted network by finding augmenting paths in a residual graph
+    //-> the gist of the idea is to continuously push flow through available augmenting paths from source to sink until no flow can be added (i.e., no augmenting path can be found from the source to the sink i.e., all augmenting paths are exhausted)
+    // Ford-Fulkerson has no defined augmenting path finding implementation (e.g., random selection, DFS, BFS, etc.): usually uses DFS -> O(E x |f*|) where f* is the maximum flow
+    int FordFulkerson(int source, int sink){
+        int max_flow = 0;
+        //residual graph: the graph that results from subtracting max flow from the original graph edge capacities at each iteration i.e., a graph with edge of residual capacities (0 residual capacity means no edge)
+        vector<vector<int>> RG;
+        // converting RG to a directed graph via zero-padding based on some regular criterion (e.g., k < j superior-triangular adjacency matrix)
+        for (int k = 0; k < getOrder(); k++){
+            for (int j = 0; j < getOrder(); j++){
+                if (k == j) RG[k][j] = 0;
+                else if (k > j){
+                    RG[k][j] = this->adjMat[k][j];
+                } else {
+                    RG[k][j] = 0; //zero-padding
+                }
+            }
+        } 
+        //BFS on the residual graph
+        vector<int> dfs = DFSPathFinder(source,RG);
+        // the condition below is a linear programming constraint: did we exhaust all the constraints or not yet ?
+        // the condition expressed in terms of source and sink: as long as the source has exiting edges (strictly positive outdegree) and sink has entering edges (strictly positive in-degree)
+        while (dfs.size() != 0 && linearSearch(dfs, sink) >= 0){ //as long as an augmenting path can be found from source to sink in the residual graph
+            // naive greedy choice in augmenting path finding (neighbor greedy filtration based on maximum weight on the dfs)
+            vector<int> augPath = {source}; //augmenting path (a path graph P_{n} where each consecutive elements are adjacent vertices)
+            int currentNode = augPath[0];
+            vector<int> visited;
+            while (currentNode != sink){
+                if (RG[currentNode][sink] > 0){ //if the sink is a neighbor of the current node, break => augmenting path as a minimal sequence of edges
+                    augPath.push_back(sink);                     
+                    break;
+                }
+                int weight = 0; 
+                vector<int> neighbors; 
+                for (int n: dfs){
+                    if (linearSearch(adjList[currentNode],n) >= 0 && linearSearch(visited, n) == -1){
+                        vector<int> tempBFS = DFSPathFinder(n, RG, visited); //to check whether the greedy choice reaches the sink or not
+                        if (weight < RG[currentNode][n] && linearSearch(tempBFS, sink) >= 0){ //maximum edge weight 
+                            weight = RG[currentNode][n];
+                            neighbors.push_back(n);
+                            visited.push_back(n); //mark as visited
+                        }                        
+                    }
+                }
+                currentNode = neighbors[neighbors.size()-1];
+                augPath.push_back(currentNode); //greedy choice for neighbor granted that it reaches the sink
+            }
+
+            // find the maximum flow possible along the augmenting path to add it to the overall maximum flow (maximum flow = bottleneck: the minimum residual capacity along the augmenting path)
+            int flow = INFINITY; 
+            for (int k = 0; k < augPath.size()-1; k++){
+                if (flow > RG[augPath[k]][augPath[k+1]]){ //bottleneck: minimum residual capacity in the residual graph's augmenting path (augPath)
+                    flow = RG[augPath[k]][augPath[k+1]]; //maximum flow = f(e) = min(C(e)- f(e)) for all e in augPath
+                }
+            }
+            
+            // add it to the overall maximum flow
+            max_flow += flow; 
+            // update the residual: the residual capacity of each edge is the original capacity of the edge - the flow in the edge; C(e) - f(e)
+            for (int k = 0; k < augPath.size()-1; k++){
+                RG[augPath[k]][augPath[k+1]] -= flow; //decrement forward edge in the augmenting path
+                RG[augPath[k+1]][augPath[k]] += flow; //increment backward edge with residual capacity as the current flow passing from the forward edge which can be undoed -> once the residual capacity of the forward edge is zero or less, backward edge residual capacity is going to reach the original capacity of the forward edge -> used for undo operations (exploration)
+                // Some edge combinations are better than others -> the naive greedy choice may not guarantee theoretical maximum flow because it reasons local neighbor-wise, thereby possibly precluding optimal edge combinations (optimal paths)
+                // Some augmenting paths are better than others, but the problem is that sub-optimal augmenting paths--constructed with local greedy choice, may preclude globally optimal ones depending on their order of choice
+                // undo operation to render naive greedy choice explorative in terms of augmenting path construction -> this makes the use of backward edges in the residual graph
+            }
+            // compute the augmenting path if it exists
+            dfs = DFSPathFinder(source,RG);
+            }
+
+        return max_flow;
+    }
+
+    // Below, the Edmonds-Karp implementation of the FF is used i.e., BFS path finding -> O(V x E^2).
+    int EdmondsKarp(int source, int sink){
+        int max_flow = 0;
+        //residual graph: the graph that results from subtracting max flow from the original graph edge capacities at each iteration i.e., a graph with edge of residual capacities (0 residual capacity means no edge)
+        vector<vector<int>> RG;
+        // converting RG to a directed graph via zero-padding based on some regular criterion (e.g., k < j superior-triangular adjacency matrix)
+        for (int k = 0; k < getOrder(); k++){
+            for (int j = 0; j < getOrder(); j++){
+                if (k == j) RG[k][j] = 0;
+                else if (k > j){
+                    RG[k][j] = this->adjMat[k][j];
+                } else {
+                    RG[k][j] = 0; //zero-padding
+                }
+            }
+        } 
+        //BFS on the residual graph
+        vector<int> bfs = BFSPathFinder(source,RG);
+        // the condition below is a linear programming constraint: did we exhaust all the constraints or not yet ?
+        // the condition expressed in terms of source and sink: as long as the source has exiting edges (strictly positive outdegree) and sink has entering edges (strictly positive in-degree)
+        while (bfs.size() != 0 && linearSearch(bfs, sink) >= 0){ //as long as an augmenting path can be found from source to sink in the residual graph
+            // naive greedy choice in augmenting path finding (neighbor greedy filtration based on maximum weight on the bfs)
+            vector<int> augPath = {source}; //augmenting path (a path graph P_{n} where each consecutive elements are adjacent vertices)
+            int currentNode = augPath[0];
+            vector<int> visited;
+            while (currentNode != sink){
+                if (RG[currentNode][sink] > 0){ //if the sink is a neighbor of the current node, break => augmenting path as a minimal sequence of edges
+                    augPath.push_back(sink);                  
+                    break;
+                }
+                int weight = 0; 
+                vector<int> neighbors; 
+                for (int n: bfs){
+                    if (linearSearch(adjList[currentNode],n) >= 0 && linearSearch(visited, n) == -1){
+                        vector<int> tempBFS = BFSPathFinder(n, RG, visited); //to check whether the greedy choice reaches the sink or not
+                        if (weight < RG[currentNode][n] && linearSearch(tempBFS, sink) >= 0){ //maximum edge weight 
+                            weight = RG[currentNode][n];
+                            neighbors.push_back(n);
+                            visited.push_back(n); //mark as visited
+                        }                        
+                    }
+                }
+                currentNode = neighbors[neighbors.size()-1];
+                augPath.push_back(currentNode); //greedy choice for neighbor granted that it reaches the sink
+            }
+
+            // find the maximum flow possible along the augmenting path to add it to the overall maximum flow (maximum flow = the minimum residual capacity along the augmenting path)
+            int flow = INFINITY; 
+            for (int k = 0; k < augPath.size()-1; k++){
+                if (flow > RG[augPath[k]][augPath[k+1]]){ //minimum residual capacity in the residual graph's augmenting path (augPath)
+                    flow = RG[augPath[k]][augPath[k+1]]; //maximum flow = f(e) = min(C(e)- f(e)) for all e in augPath
+                }
+            }
+            
+            // add it to the overall maximum flow
+            max_flow += flow; 
+            // update the residual: the residual capacity of each edge is the original capacity of the edge - the flow in the edge; C(e) - f(e)
+            for (int k = 0; k < augPath.size()-1; k++){
+                RG[augPath[k]][augPath[k+1]] -= flow; //decrement forward edge in the augmenting path
+                RG[augPath[k+1]][augPath[k]] += flow; //increment backward edge with residual capacity as the current flow passing from the forward edge which can be undoed -> once the residual capacity of the forward edge is zero or less, backward edge residual capacity is going to reach the original capacity of the forward edge -> used for undo operations (exploration)
+                // Some edge combinations are better than others -> the naive greedy choice may not guarantee theoretical maximum flow because it reasons local neighbor-wise, thereby possibly precluding optimal edge combinations (optimal augmenting paths)
+                // Some augmenting paths are better than others, but the problem is that sub-optimal augmenting paths--constructed with local greedy choice, may preclude globally optimal ones depending on their order of choice
+                // undo operation to render naive greedy choice explorative in terms of augmenting path construction -> this makes the use of backward edges in the residual graph            
+            }
+            // compute the augmenting path if it exists
+            bfs = BFSPathFinder(source,RG);
+            }
+
+        return max_flow;
+    }
+
+    //Dinic algorithm
+     
+    
+    //Minimum Cut problem: find the minimum cut i.e., cut with the minimum cost (minimum total removed egdge capacities or weights)
+    //Variations:
+        //1- s-t min cut: the minimum cut it takes to separate a source vertex s from a sink vertex t
+        //2- Global min-cut: the minimum cut it takes to partition the graph vertices into two disjoint sets without specifying source and sink
+    //Cut: a partition of the graph vertices V into two disjoint sets S and T after cutting or removing edges.
+    //Cut-Set: the set of edges that joins an endpoint from S and an endpoint from T (co-cycle [S,T])
+    //Minimum Cut: the cut with minimum total edge capacities or weights.
+
+
+    //Edmonds-Karp algorithm: based in the max-flow min-cut theorem (strong duality theorem): the max flow in a directed weighted network is the min cut of that network
+    vector<vector<int>> EdmondsKarpCut(int source, int sink){
+        vector<vector<int>> cutSet; //co-cycle [S,T]
+        //residual graph: the graph that results from subtracting max flow from the original graph edge capacities at each iteration i.e., a graph with edge of residual capacities (0 residual capacity means no edge)
+        vector<vector<int>> RG;
+        // converting RG to a directed graph via zero-padding based on some regular criterion (e.g., k < j superior-triangular adjacency matrix)
+        for (int k = 0; k < getOrder(); k++){
+            for (int j = 0; j < getOrder(); j++){
+                if (k == j) RG[k][j] = 0;
+                else if (k > j){
+                    RG[k][j] = this->adjMat[k][j];
+                } else {
+                    RG[k][j] = 0; //zero-padding
+                }
+            }
+        } 
+        //BFS on the residual graph
+        vector<int> bfs = BFSPathFinder(source,RG);
+        // the condition below is a linear programming constraint: did we exhaust all the constraints or not yet ?
+        // the condition expressed in terms of source and sink: as long as the source has exiting edges (strictly positive outdegree) and sink has entering edges (strictly positive in-degree)
+        while (bfs.size() != 0 && linearSearch(bfs, sink) >= 0){ //as long as an augmenting path can be found from source to sink in the residual graph
+            // naive greedy choice in augmenting path finding (neighbor greedy filtration based on maximum weight on the bfs)
+            vector<int> augPath = {source}; //augmenting path (a path graph P_{n} where each consecutive elements are adjacent vertices)
+            int currentNode = augPath[0];
+            vector<int> visited;
+            while (currentNode != sink){
+                if (RG[currentNode][sink] > 0){ //if the sink is a neighbor of the current node, break => augmenting path as a minimal sequence of edges
+                    augPath.push_back(sink);                  
+                    break;
+                }
+                int weight = 0; 
+                vector<int> neighbors; 
+                for (int n: bfs){
+                    if (linearSearch(adjList[currentNode],n) >= 0 && linearSearch(visited, n) == -1){
+                        vector<int> tempBFS = BFSPathFinder(n, RG, visited); //to check whether the greedy choice reaches the sink or not
+                        if (weight < RG[currentNode][n] && linearSearch(tempBFS, sink) >= 0){ //maximum edge weight 
+                            weight = RG[currentNode][n];
+                            neighbors.push_back(n);
+                            visited.push_back(n); //mark as visited
+                        }                        
+                    }
+                }
+                currentNode = neighbors[neighbors.size()-1];
+                augPath.push_back(currentNode); //greedy choice for neighbor granted that it reaches the sink
+            }
+
+            // find the maximum flow possible along the augmenting path to add it to the overall maximum flow (maximum flow = the minimum residual capacity along the augmenting path)
+            int flow = INFINITY; 
+            for (int k = 0; k < augPath.size()-1; k++){
+                if (flow > RG[augPath[k]][augPath[k+1]]){ //minimum residual capacity in the residual graph's augmenting path (augPath)
+                    flow = RG[augPath[k]][augPath[k+1]]; //maximum flow = f(e) = min(C(e)- f(e)) for all e in augPath
+                }
+            }
+            
+            // update the residual: the residual capacity of each edge is the original capacity of the edge - the flow in the edge; C(e) - f(e)
+            for (int k = 0; k < augPath.size()-1; k++){
+                RG[augPath[k]][augPath[k+1]] -= flow; //decrement forward edge in the augmenting path
+                if (RG[augPath[k]][augPath[k+1]] <= 0){
+                    cutSet.push_back({augPath[k],augPath[k+1]});
+                }
+                RG[augPath[k+1]][augPath[k]] += flow; //increment backward edge with residual capacity as the current flow passing from the forward edge which can be undoed -> once the residual capacity of the forward edge is zero or less, backward edge residual capacity is going to reach the original capacity of the forward edge -> used for undo operations (exploration)
+                // Some edge combinations are better than others -> the naive greedy choice may not guarantee theoretical maximum flow because it reasons local neighbor-wise, thereby possibly precluding optimal edge combinations (optimal augmenting paths)
+                // Some augmenting paths are better than others, but the problem is that sub-optimal augmenting paths--constructed with local greedy choice, may preclude globally optimal ones depending on their order of choice
+                // undo operation to render naive greedy choice explorative in terms of augmenting path construction -> this makes the use of backward edges in the residual graph            
+            }
+            // compute the augmenting path if it exists
+            bfs = BFSPathFinder(source,RG);
+            }
+
+        return cutSet;
+    }
+
+    //Karger algorithm: A stochastic sampling on Edmond-Karps to find the smallest number of edges that disconnect the graph into two disjoint sets S and T in an undirected & unweighted graph
+        //1- Construct a conctract graph as original graph copy
+        //2- Pick a random pair of nodes from the contract graph
+        //3- Edge contraction: merge the randomly selected nodes into one and remove self-loops -> add each contracted edge to the cut set.
+        //4- Repeat until the order of the contract graph is 2
+    //The Karger algorithm uses the Monte-Carlo method for random sampling which means that it merely yields an approximate solution (sub-minimum cut)
+    vector<vector<int>> Karger(){
+        vector<vector<int>> cutSet;
+        vector<vector<int>> CG = this->adjMat; //Contract Graph: initially initialized to be an exact copy of the original graph
+        int N = CG.size(); 
+
+        map<int, int> visited; 
+        // 1. Obtain a random seed from the hardware
+        random_device rd; 
+        
+        // 2. Initialize the standard mersenne_twister_engine with the seed
+        mt19937 gen(rd()); 
+        
+        // 3. Define the inclusive range [min, max]
+        uniform_int_distribution<int> distrib(0, N-1);
+        
+        // Monte-Carlo sampling on the set of vertices
+        int k = distrib(gen); //first random node
+        int j = distrib(gen); //second random node
+        while (k == j){
+            int k = distrib(gen); //first random node
+            int j = distrib(gen); //second random node
+        }
+        visited[k] = 1;
+        visited[j] = 1;
+        
+        // edge contraction
+        cutSet.push_back({k,j}); //add the edge to the cut set
+        CG[k][j] = CG[j][k] = 0; //remove self-loops prior to node merging  
+        k = j; //or use the Cantor pairing function: 1/2 (x + y)(x + y + 1) + y
+        N--; 
+
+        while (N > 2){ //while the number of vertices is strictly greater than 2 -> halt once it reaches 2
+            // Monte-Carlo sampling on the set of vertices
+            int k = distrib(gen); //first random node
+            int j = distrib(gen); //second random node
+            while (k == j || (visited[k] == 1 && visited[j] == 1)){
+                int k = distrib(gen); //first random node
+                int j = distrib(gen); //second random node
+            }
+            visited[k] = 1;
+            visited[j] = 1;
+
+            // edge contraction
+            cutSet.push_back({k,j}); //add the edge to the cut set
+            CG[k][j] = CG[j][k] = 0; //remove self-loops prior to node merging  
+            k = j; //or use the Cantor pairing function
+            N--; 
         }
 
+        return cutSet; 
+
     }
-    //Flow Optimization: Ford-Fulkerson, Edmond-Karp, Dinic
-    //Assignment: Gale-Shapley 
-    
+
+        
     //Minimum Spanning Tree: Kruskal, Prim
     
-    //Spanning Tree is a subgraph in a graph G that is a tree (connected + acylical) that contains all vertices of G.
+    //Spanning Tree is a subgraph in a graph G that is a tree (connected + acylical) that contains all vertices of G => ST is just a dominating set and its edges.
     //Minimal Spanning Tree: a spanning tree that doesn't contain or is a superset of any other spanning tree.
     //Minimum Spanning Tree: a spanning tree with the smallest cumulative weight of edges.
     bool checker(vector<vector<int>> arr, vector<int> target){
@@ -1479,7 +1880,7 @@ class Graph{
     // Prim algorithm builds the minimum spanning tree node-by-node (fit for dense graphs)
     vector<int> Prim(){
         vector<int> MST; //the elements of the Prim MST are vertices (nodes) such that two consecutive nodes are necessarily adjacent and joined by the minimum-weight edge of the first node i.e., Prim MST is a minimum-weight path with k vertices and k-1 edges.
-        vector<int> outNodes = Nodes - MST; //outNodes: set of nodes outside of the MST, inNodes: set of nodes witin the MST
+        vector<int> outNodes = Nodes - MST; //the algorithm divides the set of nodes into: outNodes: set of nodes outside of the MST, inNodes: set of nodes witin the MST
         while (MST.size() < this->getOrder()){ //this also ensures that no cycles are formed; in a connected graph (m>=n-1), a graph is acylical <=> m = n-1 (m > n-1 are eliminated) 
             int currentNode = outNodes[0]; //center on an unvisited node: tabu mechanism on next chosen nodes
             MST.push_back(currentNode);
@@ -1497,8 +1898,8 @@ class Graph{
         return MST; 
     }
 
+    //Assignment: Gale-Shapley 
     //Topological Sorting (DAG)
-    //Minimum Cut problems
     //Covering problems
     //Packing problems
     //Eulerian/Hamiltonian Path/Tours
