@@ -1771,6 +1771,7 @@ class Graph{
     //The Karger algorithm uses the Monte-Carlo method for random sampling which means that it merely yields an approximate solution (sub-minimum cut)
     vector<vector<int>> Karger(){
         vector<vector<int>> cutSet;
+
         vector<vector<int>> CG = this->adjMat; //Contract Graph: initially initialized to be an exact copy of the original graph
         int N = CG.size(); 
 
@@ -1795,9 +1796,7 @@ class Graph{
         visited[j] = 1;
         
         // edge contraction
-        cutSet.push_back({k,j}); //add the edge to the cut set
-        CG[k][j] = CG[j][k] = 0; //remove self-loops prior to node merging  
-        k = j; //or use the Cantor pairing function: 1/2 (x + y)(x + y + 1) + y
+        CG[k][j] = CG[j][k] = 0; //remove self-loops
         N--; 
 
         while (N > 2){ //while the number of vertices is strictly greater than 2 -> halt once it reaches 2
@@ -1812,12 +1811,15 @@ class Graph{
             visited[j] = 1;
 
             // edge contraction
-            cutSet.push_back({k,j}); //add the edge to the cut set
-            CG[k][j] = CG[j][k] = 0; //remove self-loops prior to node merging  
-            k = j; //or use the Cantor pairing function
+            CG[k][j] = CG[j][k] = 0; //remove self-loops
             N--; 
         }
 
+        for (int k = 0; k < CG.size(); k++){
+            for (int j = 0; j < CG.size(); j++){
+                if (CG[k][j] != 0 || CG[j][k] != 0) cutSet.push_back({k,j}); //add the edge to the cut set
+            }
+        }
         return cutSet; 
 
     }
